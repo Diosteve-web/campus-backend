@@ -6,12 +6,13 @@ const groupSchema = new mongoose.Schema(
       type: String,
       required: [true, "Group name is required."],
       trim: true,
+      maxlength: 100,
     },
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
       required: true,
-      unique: true,   // one group per event
+      unique: true, // one group per event
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -26,7 +27,7 @@ const groupSchema = new mongoose.Schema(
     ],
     isActive: {
       type: Boolean,
-      default: true,   // becomes false after event ends
+      default: true,
     },
   },
   { timestamps: true }

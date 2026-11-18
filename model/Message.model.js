@@ -23,14 +23,17 @@ const messageSchema = new mongoose.Schema(
       enum: ["text", "announcement", "system"],
       default: "text",
     },
-    // ⚡ THE MAGIC: TTL index deletes this automatically
+    // ⚡ TTL: MongoDB auto-deletes when expiresAt < now
     expiresAt: {
       type: Date,
-      index: { expires: 0 },   // ← MongoDB deletes at this exact time
+      index: { expires: 0 },
     },
   },
   { timestamps: true }
 );
+
+// Fast queries: "get latest messages for a group"
+messageSchema.index({ group: 1, createdAt: -1 });
 
 const Message = mongoose.model("Message", messageSchema);
 export default Message;
