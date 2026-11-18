@@ -1,16 +1,29 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import authRoutes from "./routes/auth.routes.js";
-
+import routes from "./routes/index.js";
+import cors from "cors";
 const app = express();
 
 // ─── Core Middleware ──────────────────────────────────────────────────────────
+
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:8081",
+    ],
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use("/api/auth", authRoutes);
+app.use("/api", routes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {

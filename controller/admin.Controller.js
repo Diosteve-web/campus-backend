@@ -1,34 +1,23 @@
 import User from "../models/User.model.js";
-import Event from "../models/Event.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 
-// ─── GET /api/admin/stats ───────────────────────────────────────────────────
+// ─── GET /api/admin/stats ────────────────────────────────────────────────────
 export const getDashboardStats = asyncHandler(async (req, res) => {
-  const [totalUsers, totalEvents, publishedEvents, upcomingEvents, totalAdmins] =
-    await Promise.all([
-      User.countDocuments(),
-      Event.countDocuments(),
-      Event.countDocuments({ isPublished: true }),
-      Event.countDocuments({ startTime: { $gte: new Date() } }),
-      User.countDocuments({ role: "admin" }),
-    ]);
+  const [totalUsers, totalAdmins, totalOrganizers, bannedUsers] = await Promise.all([
+    User.countDocuments(),
+    User.countDocuments({ role: "admin" }),
+    User.countDocuments({ role: "organizer" }),
+    User.countDocuments({ isBanned: true }),
+  ]);
 
   res.status(200).json({
     success: true,
-    data: {
-      stats: {
-        totalUsers,
-        totalAdmins,
-        totalEvents,
-        publishedEvents,
-        upcomingEvents,
-      },
-    },
+    data: { stats: { totalUsers, totalAdmins, totalOrganizers, bannedUsers } },
   });
 });
 
-// ─── GET /api/admin/users ───────────────────────────────────────────────────
+// ─── GET /api/admin/users ────────────────────────────────────────────────────
 export const listUsers = asyncHandler(async (req, res) => {
   const { role, search, page = 1, limit = 20 } = req.query;
 
@@ -53,32 +42,22 @@ export const listUsers = asyncHandler(async (req, res) => {
     success: true,
     data: {
       users,
-      pagination: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        pages: Math.ceil(total / Number(limit)),
-      },
+      pagination: { total, page: Number(page), limit: Number(limit), pages: Math.ceil(total / Number(limit)) },
     },
   });
 });
 
-// ─── GET /api/admin/users/:id ───────────────────────────────────────────────
+// ─── GET /api/admin/users/:id ────────────────────────────────────────────────
 export const getUserById = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).select("-password");
   if (!user) throw new ApiError(404, "User not found.");
   res.status(200).json({ success: true, data: { user } });
 });
 
-// ─── PATCH /api/admin/users/:id/role ────────────────────────────────────────
+// ─── PATCH /api/admin/users/:id/role ─────────────────────────────────────────
 export const updateUserRole = asyncHandler(async (req, res) => {
   const { role } = req.body;
 
-  if (!["student", "organizer", "admin"].includes(role)) {
-    throw new ApiError(400, "Invalid role. Must be student, organizer, or admin.");
-  }
-
-  // Prevent an admin from demoting themselves — leave at least one admin
   if (req.params.id === req.user.id.toString() && role !== "admin") {
     throw new ApiError(400, "You cannot demote yourself.");
   }
@@ -98,7 +77,30 @@ export const updateUserRole = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── DELETE /api/admin/users/:id ────────────────────────────────────────────
+// ─── PATCH /api/admin/users/:id/ban ──────────────────────────────────────────
+export const banUser = asyncHandler(async (req, res) => {
+  const { banned } = req.body;
+
+  if (req.params.id === req.user.id.toString()) {
+    throw new ApiError(400, "You cannot ban yourself.");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { isBanned: banned },
+    { new: true }
+  ).select("-password");
+
+  if (!user) throw new ApiError(404, "User not found.");
+
+  res.status(200).json({
+    success: true,
+    message: banned ? "User banned." : "User unbanned.",
+    data: { user },
+  });
+});
+
+// ─── DELETE /api/admin/users/:id ─────────────────────────────────────────────
 export const deleteUser = asyncHandler(async (req, res) => {
   if (req.params.id === req.user.id.toString()) {
     throw new ApiError(400, "You cannot delete your own account.");

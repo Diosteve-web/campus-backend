@@ -25,7 +25,7 @@ async function seedAdmin() {
       fullname: "CampusOAU Admin",
       matricNumber: ADMIN_MATRIC,
       email: ADMIN_EMAIL,
-      password: hashedPassword, // pass already hashed (skip pre-save)
+      password: hashedPassword,
       role: "admin",
     });
 
